@@ -1,0 +1,48 @@
+# Define the Arduino device COM port
+$arduinoPort = "COM4"
+$deejPath = "C:\Users\Matthew Wilde\Documents\Deej\deej.exe"
+$sourceID = "ArduinoDeviceChange5"
+
+# Register a WMI event to detect device changes
+Register-WmiEvent -Class win32_DeviceChangeEvent -SourceIdentifier $sourceID
+
+#if deej is not running on start run it 
+$id = Get-Process -name deej
+    if($null -eq $id){
+        Start-Process $deejPath -WindowStyle Hidden -ErrorAction SilentlyContinue
+        Write-host 'starting deej.exe'
+    }
+
+
+# Define the action to take when the device change is detected
+function start-Deej {
+    param (
+      $device
+    )
+    
+    # Check if the inserted device matches the Arduino NANO Every on COM4
+    $device = Get-WmiObject Win32_SerialPort | Where-Object { $_.DeviceID -eq $arduinoPort }
+    # If the device is found, start deej.exe
+    if ($device.Binary -eq $true) {
+        Start-Process $deejPath -WindowStyle Hidden -ErrorAction SilentlyContinue
+        Write-host 'starting deej.exe'
+    }
+    else {
+        # If the device is not found, terminate deej.exe if it's running
+        Write-host 'Stopping deej.exe'
+        $id = Get-Process -name deej
+        Stop-Process -ID $id.id -ErrorAction SilentlyContinue
+    }
+}
+
+$device = Get-WmiObject Win32_SerialPort | Where-Object { $_.DeviceID -eq $arduinoPort }
+start-Deej -device $device
+
+# Continuously monitor for device change events
+while ($true) {
+    $newEvent = Wait-Event -SourceIdentifier $sourceID
+    $newEvent.SourceEventArgs.NewEvent
+    $device = Get-WmiObject Win32_SerialPort | Where-Object { $_.DeviceID -eq $arduinoPort }
+    start-Deej -device $device
+    Remove-Event -SourceIdentifier $sourceID
+}
