@@ -1,3 +1,4 @@
+# Please check out my comment here: https://github.com/omriharel/deej/issues/38#issuecomment-1930607077 to figure out deployment with windows task scheudler
 # If you use this script, ensure to disable powershell notifications as they will continue to popup when this script is running in the background
 # Define the Arduino device COM port
 $arduinoPort = "COM4"
