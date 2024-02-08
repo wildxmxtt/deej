@@ -2,25 +2,28 @@
 $arduinoPort = "COM4"
 $deejPath = "C:\Users\UserName\Documents\Deej\deej.exe"
 $sourceID = "ArduinoDeviceChange5"
-
+#Registers the event with WMI to detect when any USB has been plugged in
 Register-WmiEvent -Class win32_DeviceChangeEvent -SourceIdentifier $sourceID
-# Define the action to take when the device change is detected
+
+# The action to take when the device change is detected
 function start-Deej {
     param (
       $device
     )
+    #checks for the device on the specified COM port
     $device = Get-WmiObject Win32_SerialPort | Where-Object { $_.DeviceID -eq $arduinoPort }
 
-    #if usb is plugged in 
+    #if usb (deej device) is plugged in 
     if($null -ne $device){
     #if program is not running
+        #gets process id
         $id = Get-Process -name deej
         if($null -eq $id){
-            #start program
+            #starts deej
             Write-Host "Starting Deej"
             Start-Process $deejPath -WindowStyle Hidden -ErrorAction SilentlyContinue
         }
-    #If ubs not plugged in
+    #If usb (deej device) not plugged in
     #check if program is running
     }else{
         #has to do this as a job as script will fly right by it if not
@@ -30,7 +33,7 @@ function start-Deej {
         }
     
         $id = Receive-Job -Job $job
-        #if usn not plugged in AND program is running, kill deej.exe
+        #if usb not plugged in AND program is running, kill deej.exe
         if($null -ne $id){
             #stop program
             Write-Host "Stopping Deej"
@@ -40,11 +43,11 @@ function start-Deej {
     
 
 }
-
+#ON START of program; gets the device
 $device = Get-WmiObject Win32_SerialPort | Where-Object { $_.DeviceID -eq $arduinoPort }
 start-Deej -device $device
 
-# Continuously monitor for device change events
+# Continuously monitor comnputer for device change events in background
 while ($true) {
     $newEvent = Wait-Event -SourceIdentifier $sourceID
     $newEvent.SourceEventArgs.NewEvent
